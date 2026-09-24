@@ -1,23 +1,63 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { motion } from "framer-motion";
+import { useState } from "react";
 import { profile, aboutStats } from "@/data/profile";
-import { useInViewOnce } from "@/hooks/useInViewOnce";
-import { useWebglSupport } from "@/hooks/useWebglSupport";
-import { useReducedMotion } from "@/hooks/useReducedMotion";
 
-const DeveloperEngineCanvas = dynamic(
-  () => import("@/experience/DeveloperEngineCanvas"),
-  { ssr: false }
-);
+const pipeline = [
+  { label: "Requirement", detail: "Understand the problem behind the feature." },
+  { label: "Breakdown", detail: "Split it into components, state and edge cases." },
+  { label: "Integrate", detail: "Wire REST APIs and real-time data into the UI." },
+  { label: "Optimize", detail: "Measure, then trim renders, payload and load time." },
+  { label: "Ship", detail: "Deliver a reliable, production-ready feature." },
+];
+
+/** Click-through delivery pipeline — replaces the old WebGL decoration. */
+function DeliveryPipeline() {
+  const [step, setStep] = useState(0);
+
+  return (
+    <div className="card mt-8 rounded-xl p-5">
+      <p className="font-mono text-[11px] tracking-[0.2em] text-muted uppercase">
+        How I ship
+      </p>
+      <ol className="mt-4 flex items-center" aria-label="Delivery pipeline">
+        {pipeline.map((p, i) => (
+          <li key={p.label} className="flex flex-1 items-center last:flex-none">
+            <button
+              type="button"
+              onClick={() => setStep(i)}
+              aria-current={step === i ? "step" : undefined}
+              aria-label={p.label}
+              className={`relative grid h-8 w-8 shrink-0 place-items-center rounded-full border font-mono text-[11px] transition-colors duration-200 ${
+                i <= step
+                  ? "border-accent text-accent"
+                  : "border-border text-muted hover:border-white/40"
+              } ${step === i ? "bg-accent/10" : "bg-transparent"}`}
+            >
+              {i + 1}
+            </button>
+            {i < pipeline.length - 1 && (
+              <span className="relative mx-1 h-px flex-1 bg-border" aria-hidden>
+                <span
+                  className="absolute inset-0 origin-left bg-accent transition-transform duration-300"
+                  style={{ transform: `scaleX(${i < step ? 1 : 0})` }}
+                />
+              </span>
+            )}
+          </li>
+        ))}
+      </ol>
+      <div key={step} className="panel-in mt-4 min-h-[3.5rem]" aria-live="polite">
+        <p className="font-display text-base font-semibold text-foreground">
+          {pipeline[step].label}
+        </p>
+        <p className="mt-1 text-sm text-muted">{pipeline[step].detail}</p>
+      </div>
+    </div>
+  );
+}
 
 export default function AboutSection() {
-  const [visualRef, visualInView] = useInViewOnce<HTMLDivElement>();
-  const webglSupported = useWebglSupport();
-  const reducedMotion = useReducedMotion();
-  const showEngine = visualInView && webglSupported !== false && !reducedMotion;
-
   return (
     <section
       id="about"
@@ -33,13 +73,7 @@ export default function AboutSection() {
             {profile.aboutHeading}
           </h2>
 
-          <div
-            ref={visualRef}
-            aria-hidden
-            className="mt-8 hidden h-56 overflow-hidden rounded-xl border border-border bg-surface sm:block"
-          >
-            {showEngine && <DeveloperEngineCanvas />}
-          </div>
+          <DeliveryPipeline />
         </div>
 
         <div className="flex flex-col gap-5">
@@ -52,19 +86,14 @@ export default function AboutSection() {
 
           <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
             {aboutStats.map((s) => (
-              <motion.div
-                key={s.label}
-                whileHover={{ y: -3 }}
-                transition={{ duration: 0.2 }}
-                className="card rounded-lg p-4"
-              >
+              <div key={s.label} className="card card-interactive rounded-lg p-4">
                 <p className="font-display text-lg font-semibold text-foreground">
                   {s.value}
                 </p>
                 <p className="mt-1 text-xs tracking-wide text-muted">
                   {s.label}
                 </p>
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>

@@ -2,7 +2,6 @@
 
 import { useState, type FormEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import RevealFade from "@/components/ui/RevealFade";
 import { profile } from "@/data/profile";
 
 const EMAIL = profile.email;
@@ -29,7 +28,7 @@ export default function ContactSection() {
       aria-label="Contact"
       className="mx-auto max-w-2xl px-6 py-20 text-center sm:py-28 lg:py-36"
     >
-      <RevealFade>
+      <div>
         <span className="font-mono text-xs tracking-[0.3em] text-muted uppercase">
           Contact
         </span>
@@ -41,9 +40,9 @@ export default function ContactSection() {
           solving real problems, and building experiences that people enjoy
           using.
         </p>
-      </RevealFade>
+      </div>
 
-      <RevealFade delay={0.1}>
+      <div>
         <div className="mt-8 flex flex-col items-center gap-2 text-sm">
           <a
             href={`mailto:${EMAIL}`}
@@ -73,9 +72,9 @@ export default function ContactSection() {
         >
           Start a Conversation
         </a>
-      </RevealFade>
+      </div>
 
-      <RevealFade delay={0.2}>
+      <div>
         <details className="card mx-auto mt-16 max-w-md rounded-xl p-5 text-left">
           <summary className="cursor-pointer font-mono text-xs tracking-wide text-muted">
             Prefer a form? Click to expand.
@@ -125,7 +124,7 @@ export default function ContactSection() {
             </AnimatePresence>
           </form>
         </details>
-      </RevealFade>
+      </div>
     </section>
   );
 }

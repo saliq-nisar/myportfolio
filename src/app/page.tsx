@@ -1,4 +1,5 @@
 import ScrollProvider from "@/components/animation/ScrollProvider";
+import MotionProvider from "@/components/animation/MotionProvider";
 import NavRail from "@/components/navigation/NavRail";
 import ProgressBar from "@/components/navigation/ProgressBar";
 import PortalHero from "@/components/sections/PortalHero";
@@ -13,7 +14,7 @@ import SiteFooter from "@/components/sections/SiteFooter";
 
 export default function Home() {
   return (
-    <>
+    <MotionProvider>
       <ScrollProvider />
       <ProgressBar />
       <NavRail />
@@ -28,6 +29,6 @@ export default function Home() {
         <ContactSection />
       </main>
       <SiteFooter />
-    </>
+    </MotionProvider>
   );
 }

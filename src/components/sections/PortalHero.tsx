@@ -1,19 +1,10 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { useEffect, useRef } from "react";
-import { motion } from "framer-motion";
-import { useWebglSupport } from "@/hooks/useWebglSupport";
-import { remap } from "@/lib/easing";
-import { getSpacerProgress } from "@/lib/scrollProgress";
+import { useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { profile } from "@/data/profile";
 
-const SceneCanvas = dynamic(() => import("@/experience/SceneCanvas"), {
-  ssr: false,
-});
-
 function jumpTo(id: string) {
-  document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+  document.getElementById(id)?.scrollIntoView();
 }
 
 function HeroCopy() {
@@ -44,88 +35,183 @@ function HeroCopy() {
           Get In Touch
         </button>
       </div>
+      <button
+        type="button"
+        onClick={() => jumpTo("skills")}
+        className="mt-4 font-mono text-xs tracking-wide text-muted transition-colors hover:text-accent"
+      >
+        ↳ Try the interactive skills lab
+      </button>
     </div>
+  );
+}
+
+/* ---------- 2D system map ---------- */
+
+type NodeId = "ui" | "state" | "api" | "realtime" | "server";
+
+const nodes: { id: NodeId; label: string; x: number; y: number }[] = [
+  { id: "ui", label: "UI", x: 60, y: 150 },
+  { id: "state", label: "State", x: 190, y: 70 },
+  { id: "api", label: "REST API", x: 190, y: 230 },
+  { id: "realtime", label: "WebSocket", x: 330, y: 70 },
+  { id: "server", label: "Server", x: 330, y: 230 },
+];
+
+const edges: [NodeId, NodeId][] = [
+  ["ui", "state"],
+  ["ui", "api"],
+  ["state", "realtime"],
+  ["api", "server"],
+  ["realtime", "server"],
+  ["state", "api"],
+];
+
+const byId = Object.fromEntries(nodes.map((n) => [n.id, n])) as Record<
+  NodeId,
+  (typeof nodes)[number]
+>;
+
+function SystemMap() {
+  const [focus, setFocus] = useState<NodeId | null>(null);
+
+  return (
+    <figure className="w-full">
+      <svg
+        viewBox="30 40 360 220"
+        className="h-auto w-full"
+        role="group"
+        aria-label="Interactive system map: hover or focus a node to highlight its connections"
+      >
+        {edges.map(([a, b], i) => {
+          const na = byId[a];
+          const nb = byId[b];
+          const active = focus === a || focus === b;
+          return (
+            <g key={`${a}-${b}`}>
+              <line
+                x1={na.x}
+                y1={na.y}
+                x2={nb.x}
+                y2={nb.y}
+                stroke="rgba(255,255,255,0.14)"
+                className="draw-in"
+                style={{ "--len": 200, animationDelay: `${i * 80}ms` } as CSSProperties}
+              />
+              {active && (
+                <line
+                  x1={na.x}
+                  y1={na.y}
+                  x2={nb.x}
+                  y2={nb.y}
+                  stroke="var(--accent)"
+                  strokeWidth={1.5}
+                  className="dash-flow"
+                />
+              )}
+            </g>
+          );
+        })}
+        {nodes.map((n) => {
+          const active = focus === n.id;
+          const w = n.label.length * 8 + 24;
+          return (
+            <g
+              key={n.id}
+              tabIndex={0}
+              role="button"
+              aria-label={`${n.label} node`}
+              aria-pressed={active}
+              onPointerEnter={() => setFocus(n.id)}
+              onPointerLeave={() => setFocus(null)}
+              onFocus={() => setFocus(n.id)}
+              onBlur={() => setFocus(null)}
+              onClick={() => setFocus(n.id)}
+              className="cursor-pointer outline-none"
+            >
+              <rect
+                x={n.x - w / 2}
+                y={n.y - 16}
+                width={w}
+                height={32}
+                rx={8}
+                fill="var(--surface)"
+                stroke={active ? "var(--accent)" : "rgba(255,255,255,0.18)"}
+                style={{ transition: "stroke var(--dur-fast) var(--ease-out)" }}
+              />
+              <text
+                x={n.x}
+                y={n.y + 4}
+                textAnchor="middle"
+                className="font-mono"
+                fontSize="11"
+                fill={active ? "var(--accent)" : "var(--foreground)"}
+              >
+                {n.label}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+      <figcaption className="mt-2 text-center font-mono text-[11px] tracking-wide text-muted">
+        {focus
+          ? `${byId[focus].label}: ${edges.filter((e) => e.includes(focus)).length} connections`
+          : "Hover or tap a node to trace the data flow"}
+      </figcaption>
+    </figure>
   );
 }
 
 export default function PortalHero() {
-  const spacerRef = useRef<HTMLDivElement>(null);
-  const flashRef = useRef<HTMLDivElement>(null);
-  const cueRef = useRef<HTMLDivElement>(null);
-  const copyRef = useRef<HTMLDivElement>(null);
-  const webglSupported = useWebglSupport();
+  const glowRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    let rafId: number;
-    const tick = () => {
-      const t = getSpacerProgress(spacerRef.current);
-      if (flashRef.current) {
-        flashRef.current.style.opacity = String(remap(t, 0.88, 1));
-      }
-      if (cueRef.current) {
-        cueRef.current.style.opacity = String(1 - remap(t, 0, 0.08));
-      }
-      if (copyRef.current) {
-        const fade = 1 - remap(t, 0, 0.07);
-        copyRef.current.style.opacity = String(fade);
-        copyRef.current.style.visibility = fade > 0.02 ? "visible" : "hidden";
-      }
-      rafId = requestAnimationFrame(tick);
-    };
-    rafId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId);
-  }, []);
+  // Cursor-follow glow: writes CSS vars directly, no React re-render.
+  const onPointerMove = (e: PointerEvent<HTMLElement>) => {
+    const el = glowRef.current;
+    if (!el || e.pointerType !== "mouse") return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    el.style.setProperty("--gx", `${e.clientX - rect.left}px`);
+    el.style.setProperty("--gy", `${e.clientY - rect.top}px`);
+  };
 
   return (
-    <section id="home" aria-label="Introduction" className="relative">
-      <div ref={spacerRef} className="relative h-[320vh]">
-        <div className="sticky top-0 h-screen w-full overflow-hidden bg-background">
-          {webglSupported === false ? (
-            <StaticFallback />
-          ) : (
-            <SceneCanvas spacerRef={spacerRef} />
-          )}
-
-          <div
-            ref={copyRef}
-            className="pointer-events-none absolute inset-x-0 top-0 z-10 flex h-full items-start justify-center px-6 pt-14 sm:justify-start sm:px-12 sm:pt-0 sm:items-center lg:px-20"
-          >
-            <div className="pointer-events-auto max-w-sm text-center sm:max-w-md sm:text-left">
-              <HeroCopy />
-            </div>
+    <section
+      id="home"
+      aria-label="Introduction"
+      onPointerMove={onPointerMove}
+      className="relative overflow-hidden"
+    >
+      <div
+        ref={glowRef}
+        aria-hidden
+        className="pointer-events-none absolute inset-0 motion-reduce:hidden"
+        style={{
+          background:
+            "radial-gradient(420px circle at var(--gx, 70%) var(--gy, 40%), color-mix(in srgb, var(--accent) 7%, transparent), transparent 70%)",
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-[0.35]"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)",
+          backgroundSize: "48px 48px",
+          maskImage: "radial-gradient(ellipse at center, black 30%, transparent 75%)",
+        }}
+      />
+      <div className="relative mx-auto grid min-h-svh max-w-6xl grid-cols-1 items-center gap-12 px-6 pt-24 pb-16 sm:px-12 lg:grid-cols-[1fr_1fr] lg:px-20">
+        <HeroCopy />
+        <div className="card mx-auto w-full max-w-md rounded-2xl p-5 sm:p-6">
+          <div className="mb-3 flex items-center gap-1.5" aria-hidden>
+            <span className="h-2 w-2 rounded-full bg-white/15" />
+            <span className="h-2 w-2 rounded-full bg-white/15" />
+            <span className="h-2 w-2 rounded-full bg-white/15" />
+            <span className="ml-2 font-mono text-[11px] text-muted">system.map</span>
           </div>
-
-          <div
-            ref={flashRef}
-            aria-hidden
-            className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-br from-cyan-200 via-white to-white"
-            style={{ opacity: 0 }}
-          />
-
-          <div
-            ref={cueRef}
-            className="pointer-events-none absolute inset-x-0 bottom-10 z-10 flex flex-col items-center gap-2 text-center"
-          >
-            <span className="font-mono text-xs tracking-[0.3em] text-muted uppercase">
-              Scroll to enter
-            </span>
-            <motion.span
-              aria-hidden
-              className="h-8 w-px bg-gradient-to-b from-accent to-transparent"
-              animate={{ scaleY: [0.4, 1, 0.4] }}
-              transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-            />
-          </div>
+          <SystemMap />
         </div>
       </div>
     </section>
-  );
-}
-
-function StaticFallback() {
-  return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-background px-6 text-center">
-      <HeroCopy />
-    </div>
   );
 }

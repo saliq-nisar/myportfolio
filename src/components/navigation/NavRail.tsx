@@ -1,26 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { sections } from "@/lib/sections";
 import { useScrollStore } from "@/hooks/useScrollStore";
 
 export default function NavRail() {
-  const [active, setActive] = useState("home");
-
-  useEffect(() => {
-    const unsub = useScrollStore.subscribe((state) => {
-      const current = sections.find(
-        (s, i) =>
-          state.progress >= s.range[0] &&
-          (state.progress < s.range[1] || i === sections.length - 1)
-      );
-      if (current) setActive((prev) => (prev === current.id ? prev : current.id));
-    });
-    return unsub;
-  }, []);
+  // Selector subscription: re-renders only when the active section changes.
+  const active = useScrollStore((s) => s.activeId);
 
   const jumpTo = (id: string) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+    document.getElementById(id)?.scrollIntoView();
   };
 
   return (
@@ -36,7 +24,7 @@ export default function NavRail() {
             type="button"
             onClick={() => jumpTo(s.id)}
             aria-current={isActive ? "true" : undefined}
-            className="group flex items-center gap-3 focus-visible:outline-none"
+            className="group flex items-center gap-3 rounded"
           >
             <span
               className={`font-mono text-[11px] tracking-[0.2em] transition-colors ${

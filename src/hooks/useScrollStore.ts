@@ -1,15 +1,19 @@
 import { create } from "zustand";
 
 interface ScrollState {
-  /** 0-1 normalized progress through the entire journey */
+  /** 0-1 normalized progress through the page (used by the progress bar only). */
   progress: number;
-  setProgress: (p: number) => void;
+  /** id of the section currently under the viewport's reading line. */
+  activeId: string;
+  setScroll: (progress: number, activeId: string) => void;
 }
 
-export const useScrollStore = create<ScrollState>((set) => ({
+export const useScrollStore = create<ScrollState>((set, get) => ({
   progress: 0,
-  setProgress: (p) => set({ progress: p }),
+  activeId: "home",
+  setScroll: (progress, activeId) => {
+    const s = get();
+    if (s.progress === progress && s.activeId === activeId) return;
+    set({ progress, activeId });
+  },
 }));
-
-/** Non-reactive read for use inside r3f useFrame loops (avoids re-render churn). */
-export const getScrollProgress = () => useScrollStore.getState().progress;

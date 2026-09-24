@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import RevealFade from "@/components/ui/RevealFade";
 import SectionHeading from "@/components/ui/SectionHeading";
 import { faq } from "@/data/faq";
 
@@ -31,7 +30,7 @@ function FaqRow({
           aria-expanded={isOpen}
           aria-controls={panelId}
           onClick={onToggle}
-          className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+          className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/60"
         >
           <span className="font-display text-base font-medium text-foreground">
             {question}
@@ -77,9 +76,7 @@ export default function FaqSection() {
       aria-label="Frequently asked questions"
       className="mx-auto max-w-3xl px-6 py-20 sm:py-28 lg:py-36"
     >
-      <RevealFade>
-        <SectionHeading eyebrow="FAQ" title="Questions, Answered." />
-      </RevealFade>
+      <SectionHeading eyebrow="FAQ" title="Questions, Answered." />
 
       <div className="flex flex-col gap-3">
         {faq.map((item, i) => (
